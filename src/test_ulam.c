@@ -4,8 +4,10 @@
 #include <stdbool.h>
 #include <stdlib.h>
 
-static const int WIN_W = 640;
-static const int WIN_H = 480;
+static const int WIN_W = 1920;
+static const int WIN_H = 1080;
+static const int TEXTURE_W = WIN_W / 3;
+static const int TEXTURE_H = WIN_H / 3;
 static const SDL_Color COLOR_BG = {0x0C, 0x0E, 0x15, 255};
 static const SDL_Color COLOR_FG = {0x78, 0xA4, 0xFF, 255};
 
@@ -20,15 +22,16 @@ Uint32 color_to_rgba(SDL_Color color) {
 
 static int drawer(DrawingThreadOptions *options) {
   SDL_Renderer *renderer = options->renderer;
-  SDL_Texture *texture = SDL_CreateTexture(
-      renderer, SDL_PIXELFORMAT_RGBA32, SDL_TEXTUREACCESS_STATIC, WIN_W, WIN_H);
+  SDL_Texture *texture =
+      SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA32,
+                        SDL_TEXTUREACCESS_STATIC, TEXTURE_W, TEXTURE_H);
 
-  PrimeGen prime_gen = init_prime_gen(WIN_W * WIN_H);
-  Uint32 pixels[WIN_W * WIN_H];
+  PrimeGen prime_gen = init_prime_gen(TEXTURE_W * TEXTURE_H * 2);
+  Uint32 pixels[TEXTURE_W * TEXTURE_H];
 
   int i = 0;
 
-  for (int i = 0; i < WIN_W * WIN_H; i++) {
+  for (int i = 0; i < TEXTURE_W * TEXTURE_H; i++) {
     pixels[i] = color_to_rgba(COLOR_BG);
   }
 
@@ -39,24 +42,27 @@ static int drawer(DrawingThreadOptions *options) {
       break;
     }
 
-    SDL_Point coord = translate_x_y(WIN_W, WIN_H, n);
+    SDL_Point coord = translate_x_y(TEXTURE_W, TEXTURE_H, n);
 
-    if (coord.x < 0 || coord.y < 0 || coord.x + 1 > WIN_W ||
-        coord.y + 1 > WIN_H) {
+    if (coord.y < 0 || coord.y + 1 > TEXTURE_H) {
       continue;
     }
 
-    pixels[coord.y * WIN_W + coord.x] = color_to_rgba(COLOR_FG);
+    if (coord.x < 0 || coord.x + 1 > TEXTURE_W) {
+      break;
+    }
+
+    pixels[coord.y * TEXTURE_W + coord.x] = color_to_rgba(COLOR_FG);
 
     if (++i % 1024 == 0) {
-      SDL_UpdateTexture(texture, NULL, pixels, WIN_W * sizeof(Uint32));
+      SDL_UpdateTexture(texture, NULL, pixels, TEXTURE_W * sizeof(Uint32));
       SDL_RenderCopy(renderer, texture, NULL, NULL);
       SDL_RenderPresent(renderer);
     }
   }
 
   if (!options->done) {
-    SDL_UpdateTexture(texture, NULL, pixels, WIN_W * sizeof(Uint32));
+    SDL_UpdateTexture(texture, NULL, pixels, TEXTURE_W * sizeof(Uint32));
     SDL_RenderCopy(renderer, texture, NULL, NULL);
     SDL_RenderPresent(renderer);
   }
@@ -104,6 +110,10 @@ int main(int argc, char **argv) {
 
     if (SDL_PollEvent(&e)) {
       if (e.type == SDL_QUIT) {
+        break;
+      }
+
+      if (e.type == SDL_KEYDOWN && e.key.keysym.scancode == SDL_SCANCODE_Q) {
         break;
       }
     }
