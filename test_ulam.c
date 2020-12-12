@@ -10,6 +10,8 @@ static const int TEXTURE_W = WIN_W / 3;
 static const int TEXTURE_H = WIN_H / 3;
 static const SDL_Color COLOR_BG = {0x0C, 0x0E, 0x15, 255};
 static const SDL_Color COLOR_FG = {0x78, 0xA4, 0xFF, 255};
+static const SDL_Color COLOR_FG_LIGHTER = {0x86, 0xE3, 0xFF, 255};
+static const SDL_Color COLOR_FG_DUSK = {0x4E, 0x6B, 0xA5, 255};
 
 typedef struct {
   bool done;
@@ -30,6 +32,9 @@ static int drawer(DrawingThreadOptions *options) {
   Uint32 pixels[TEXTURE_W * TEXTURE_H];
 
   int i = 0;
+  Uint32 color_fg = color_to_rgba(COLOR_FG);
+  Uint32 color_fg_alt = color_to_rgba(COLOR_FG_LIGHTER);
+  Uint32 color_fg_dusk = color_to_rgba(COLOR_FG_DUSK);
 
   for (int i = 0; i < TEXTURE_W * TEXTURE_H; i++) {
     pixels[i] = color_to_rgba(COLOR_BG);
@@ -52,9 +57,15 @@ static int drawer(DrawingThreadOptions *options) {
       break;
     }
 
-    pixels[coord.y * TEXTURE_W + coord.x] = color_to_rgba(COLOR_FG);
+    if (i % 4 == 0) {
+      pixels[coord.y * TEXTURE_W + coord.x] = color_fg_alt;
+    } else if (i % 5 == 0) {
+      pixels[coord.y * TEXTURE_W + coord.x] = color_fg_dusk;
+    } else {
+      pixels[coord.y * TEXTURE_W + coord.x] = color_fg;
+    }
 
-    if (++i % 1024 == 0) {
+    if (++i % 2048 == 0) {
       SDL_UpdateTexture(texture, NULL, pixels, TEXTURE_W * sizeof(Uint32));
       SDL_RenderCopy(renderer, texture, NULL, NULL);
       SDL_RenderPresent(renderer);
